@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitalize — Правила сервера</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brandBg: '#030508',
+                        brandSurface: '#0a0e17',
+                        brandSurfaceHover: '#101624',
+                        brandBorder: '#182030',
+                        brandAccent: '#0284c7',
+                        brandSky: '#38bdf8',
+                        brandCyan: '#06b6d4',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #030508;
+            color: #cbd5e1;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Interactive Cursor Ambient Glow */
+        #cursor-glow {
+            position: fixed;
+            top: -250px;
+            left: -250px;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, rgba(6, 182, 212, 0.04) 45%, rgba(0, 0, 0, 0) 70%);
+            pointer-events: none;
+            z-index: 1;
+            transform: translate(-50%, -50%);
+            transition: opacity 0.3s ease;
+            will-change: left, top;
+        }
+
+        /* Custom Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #030508;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #182030;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #253248;
+        }
+
+        /* 3D Perspective Container */
+        .perspective-container {
+            perspective: 1000px;
+        }
+
+        /* Dynamic Sliding Tab Pill Indicator ("Переползающая плашка") */
+        #tab-indicator {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            border-radius: 6px;
+            background-color: rgba(24, 32, 48, 0.95);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 16px rgba(2, 132, 199, 0.25);
+            transition: left 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+            pointer-events: none;
+        }
+
+        /* 3D Interactive Tilt Cards */
+        .tilt-card {
+            transform-style: preserve-3d;
+            will-change: transform;
+            transition: transform 0.1s ease-out, border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .tilt-card:hover {
+            border-color: rgba(56, 189, 248, 0.45);
+            box-shadow: 0 12px 32px -8px rgba(2, 132, 199, 0.18);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-sky-500/20 selection:text-sky-300">
+
+    <!-- Ambient Glow following cursor -->
+    <div id="cursor-glow" aria-hidden="true"></div>
+
+    <header class="border-b border-brandBorder/80 bg-brandBg/90 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            
+            <!-- Logo & Brand Title -->
+            <div class="flex items-center gap-3">
+                <a href="#" class="flex items-center gap-2.5 group">
+                    <span class="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-400 font-mono font-bold text-sm flex items-center justify-center group-hover:bg-sky-500/20 group-hover:border-sky-400/50 transition">V</span>
+                    <span class="text-base font-bold tracking-wider text-slate-100 group-hover:text-sky-400 transition-colors">VITALIZE</span>
+                </a>
+                <span class="hidden sm:inline-block text-slate-700">/</span>
+                <span class="hidden sm:inline-block text-xs text-slate-400 font-mono">Правила проекта</span>
+            </div>
+
+            <!-- Server Connection IP Buttons -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Java IP Pill Button -->
+                <button onclick="copyText('65.21.16.190:25854', 'Java IP')" class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-brandSurface border border-brandBorder hover:border-sky-500/50 text-xs font-mono text-slate-300 hover:text-slate-100 transition shadow-sm group">
+                    <span class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">JAVA</span>
+                    <span class="hidden md:inline">65.21.16.190:25854</span>
+                    <i class="fa-regular fa-copy text-slate-500 group-hover:text-sky-400 text-[11px] transition"></i>
+                </button>
+
+                <!-- Bedrock IP Pill Button -->
+                <button onclick="copyText('65.21.16.190:25566', 'Bedrock IP')" class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-brandSurface border border-brandBorder hover:border-cyan-500/50 text-xs font-mono text-slate-300 hover:text-slate-100 transition shadow-sm group">
+                    <span class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">BEDROCK</span>
+                    <span class="hidden md:inline">65.21.16.190 : 25566</span>
+                    <i class="fa-regular fa-copy text-slate-500 group-hover:text-cyan-400 text-[11px] transition"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <section class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-4 w-full">
+        <div class="border-b border-brandBorder/60 pb-8">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                
+                <div>
+                    <div class="flex items-center gap-2.5 mb-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span class="text-xs font-mono text-emerald-400 uppercase tracking-widest font-semibold">Сервер онлайн</span>
+                        <span class="text-xs font-mono font-normal px-2 py-0.5 rounded bg-sky-950/60 border border-sky-800/50 text-sky-300 ml-2">v2.1</span>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-slate-100 tracking-tight">
+                        Официальный регламент Vitalize
+                    </h1>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-2 max-w-2xl leading-relaxed">
+                        Свод обязательных правил для игроков и администрации. Подключаясь к серверу, вы автоматически подтверждаете согласие с каждым из данных пунктов.
+                    </p>
+                </div>
+
+                <!-- Connection Info Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:flex gap-3 shrink-0">
+                    <!-- Java Connection Card -->
+                    <div onclick="copyText('65.21.16.190:25854', 'Java IP')" class="cursor-pointer p-3 rounded-xl bg-brandSurface/80 border border-brandBorder hover:border-sky-500/50 transition group">
+                        <div class="flex items-center justify-between gap-3 mb-1">
+                            <span class="text-[11px] font-bold font-mono text-sky-400 uppercase tracking-wider">Java Edition</span>
+                            <i class="fa-regular fa-copy text-slate-500 group-hover:text-sky-400 text-xs transition"></i>
+                        </div>
+                        <div class="text-xs font-mono text-slate-200 group-hover:text-white transition">65.21.16.190:25854</div>
+                        <div class="text-[10px] text-slate-500 mt-0.5">Кликните для копирования</div>
+                    </div>
+
+                    <!-- Bedrock Connection Card -->
+                    <div onclick="copyText('65.21.16.190:25566', 'Bedrock IP и порт')" class="cursor-pointer p-3 rounded-xl bg-brandSurface/80 border border-brandBorder hover:border-cyan-500/50 transition group">
+                        <div class="flex items-center justify-between gap-3 mb-1">
+                            <span class="text-[11px] font-bold font-mono text-cyan-400 uppercase tracking-wider">Bedrock Edition</span>
+                            <i class="fa-regular fa-copy text-slate-500 group-hover:text-cyan-400 text-xs transition"></i>
+                        </div>
+                        <div class="text-xs font-mono text-slate-200 group-hover:text-white transition">IP: 65.21.16.190 <span class="text-slate-500">|</span> Порт: 25566</div>
+                        <div class="text-[10px] text-slate-500 mt-0.5">Кликните для копирования</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <section class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 mb-6 w-full">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            
+            <!-- Category Tabs with Sliding Pill Animation -->
+            <div id="tabs-container" class="relative inline-flex p-1 rounded-lg bg-brandSurface border border-brandBorder text-xs font-medium">
+                <!-- Sliding Background Pill Indicator -->
+                <div id="tab-indicator" class="absolute"></div>
+
+                <button onclick="setCategory('all', this)" id="tab-all" class="tab-btn relative z-10 px-3 py-1.5 rounded-md text-slate-100 transition-colors duration-200">
+                    Все правила <span id="count-all" class="ml-1 text-[11px] text-slate-400 font-mono">0</span>
+                </button>
+                <button onclick="setCategory('player', this)" id="tab-player" class="tab-btn relative z-10 px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-colors duration-200">
+                    Игрокам <span id="count-player" class="ml-1 text-[11px] text-slate-500 font-mono">0</span>
+                </button>
+                <button onclick="setCategory('admin', this)" id="tab-admin" class="tab-btn relative z-10 px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-colors duration-200">
+                    Администрации <span id="count-admin" class="ml-1 text-[11px] text-slate-500 font-mono">0</span>
+                </button>
+            </div>
+
+            <!-- Live Search Bar -->
+            <div class="relative w-full sm:w-80">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Поиск (например: 1.1, читы, дюп, мут)..." 
+                       class="w-full pl-8 pr-7 py-1.5 bg-brandSurface border border-brandBorder rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/70 transition">
+                <button id="clearBtn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            </div>
+
+        </div>
+    </section>
+
+    <main class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 mb-16 flex-grow w-full perspective-container">
+        <div id="rulesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Rules cards generated dynamically via JavaScript -->
+        </div>
+
+        <!-- Empty Results View -->
+        <div id="emptyView" class="hidden border border-dashed border-brandBorder rounded-xl p-10 text-center my-4 bg-brandSurface/30">
+            <i class="fa-solid fa-filter text-slate-600 text-xl mb-2"></i>
+            <p class="text-sm font-medium text-slate-300">Пункт правил не найден</p>
+            <p class="text-xs text-slate-500 mt-1">Попробуйте изменить поисковый запрос или выбранную категорию.</p>
+        </div>
+    </main>
+
+    <footer class="relative z-10 border-t border-brandBorder/60 py-6 text-xs text-slate-500">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div>
+                <span class="font-medium text-slate-300">Vitalize Server</span> &copy; Все права защищены.
+            </div>
+            <div class="flex items-center gap-4 text-slate-500">
+                <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="hover:text-slate-300 transition">
+                    Наверх <i class="fa-solid fa-arrow-up text-[10px] ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Notification Popup -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 pointer-events-none transition-all duration-200 flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 border border-sky-500/40 text-slate-200 text-xs shadow-2xl">
+        <i class="fa-solid fa-check text-sky-400 text-xs"></i>
+        <span id="toastText">Скопировано в буфер обмена</span>
+    </div>
+
+    <script>
+        // Server Rules Dataset
+        const rules = [
+            // ПРАВИЛА ДЛЯ ВСЕХ ИГРОКОВ (1.1 - 1.10)
+            {
+                id: "1.1",
+                category: "player",
+                title: "Читы",
+                desc: "Использование любых читов и посторонних нечестных программ.",
+                punishment: "Бан 40д (если признался 20д)",
+                keywords: "читы чит признался читер 40д 20д бан"
+            },
+            {
+                id: "1.2",
+                category: "player",
+                title: "Спам / Флуд",
+                desc: "Многократная отправка однотипных или бессмысленных сообщений в чат.",
+                punishment: "Мут 3ч",
+                keywords: "спам флуд чат сообщения мут 3ч"
+            },
+            {
+                id: "1.3",
+                category: "player",
+                title: "Оск родни / человека",
+                desc: "Оскорбление личностных качеств игрока или упоминание родственников.",
+                punishment: "Мут 6ч (при повторе 12ч)",
+                keywords: "оск родни родных человек оскорбление мут 6ч 12ч"
+            },
+            {
+                id: "1.4",
+                category: "player",
+                title: "Клиенты и постороннее ПО",
+                desc: "Визуал клиенты разрешены, чит клиенты запрещены.",
+                punishment: "Бан 40д или 20д",
+                keywords: "клиенты посторонние по визуал бан 40д 20д ПО"
+            },
+            {
+                id: "1.5",
+                category: "player",
+                title: "Оск администрации",
+                desc: "В список администрации входят: овнер, технический админ, хелпер, билдер.",
+                punishment: "Мут по усмотрению администрации",
+                keywords: "оск админов овнер технический админ хелпер билдер мут"
+            },
+            {
+                id: "1.6",
+                category: "player",
+                title: "Реклама сторонних проектов",
+                desc: "Реклама своего или чужого сервера, каналов и посторонних ресурсов.",
+                punishment: "Мут 16ч",
+                keywords: "реклама проект сервер пиар мут 16ч"
+            },
+            {
+                id: "1.7",
+                category: "player",
+                title: "Упоминание обнуления человека (см3рти)",
+                desc: "Пожелания физического вреда, смерти или обнуления игроков.",
+                punishment: "Мут 1д (при повторе бан 3д)",
+                keywords: "обнуление смерть смерти мут 1д бан 3д"
+            },
+            {
+                id: "1.8",
+                category: "player",
+                title: "Угрожения или шантажирование",
+                desc: "Запугивание игроков или вымогательство ресурсов под угрозой причинения вреда.",
+                punishment: "Мут 6ч",
+                keywords: "угрозы шантаж угрожение шантажирование мут 6ч"
+            },
+            {
+                id: "1.9",
+                category: "player",
+                title: "Взлом или передача аккаунтов",
+                desc: "За взлом аккаунта бан 12д на оба аккаунта, за передачу бан на 6д на аккаунт передавателя и получателя.",
+                punishment: "Бан 12д (взлом) / Бан 6д (передача)",
+                keywords: "взлом передача аккаунт аккаунтов бан 12д 6д"
+            },
+            {
+                id: "1.10",
+                category: "player",
+                title: "Багоюз / Дюп",
+                desc: "Использование игровых багов, дюп предметов или проход сквозь стены.",
+                punishment: "Бан от 7 до 30 дней с вайпом ресурсов",
+                keywords: "багоюз дюп баги стены проход вайп бан 7д 30д"
+            },
+
+            // ПРАВИЛА ДЛЯ АДМИНИСТРАЦИИ (2.1 - 2.9)
+            {
+                id: "2.1",
+                category: "admin",
+                title: "Оск роли ниже / выше",
+                desc: "Оскорбление участника персонала с ролью ниже или выше по должности.",
+                punishment: "Мут 2ч",
+                keywords: "оск роли хелпер админ мут 2ч"
+            },
+            {
+                id: "2.2",
+                category: "admin",
+                title: "Унижение игроков сервера",
+                desc: "Какое-либо унижение или надменное отношение к игрокам со стороны администрации.",
+                punishment: "Мут 12ч (при повторе бан 1д)",
+                keywords: "унижение игроков сервера мут 12ч бан 1д"
+            },
+            {
+                id: "2.3",
+                category: "admin",
+                title: "Некорректный бан (без причины)",
+                desc: "Выдача бана без обоснованной причины и доказательств.",
+                punishment: "Бан 1д (при повторе бан 10д)",
+                keywords: "некорректный бан без причины 1д 10д"
+            },
+            {
+                id: "2.4",
+                category: "admin",
+                title: "Соучастие в нарушениях игроков",
+                desc: "Администратор покрывает нарушителя, играет с читером в пати или помогает избежать наказания.",
+                punishment: "Снятие с поста и бан 15д",
+                keywords: "покрывательство читер соучастие пати снятие бан 15д"
+            },
+            {
+                id: "2.5",
+                category: "admin",
+                title: "Блат и предвзятое отношение",
+                desc: "Игнорирование нарушений друзей или завышение наказаний для неугодных игроков.",
+                punishment: "Выговор (при повторе снятие)",
+                keywords: "блат предвзятое отношение друзья выговор снятие"
+            },
+            {
+                id: "2.6",
+                category: "admin",
+                title: "Слив конфиденциальной информации",
+                desc: "Разглашение планов сервера, админских паролей, внутренней информации или личных данных игроков.",
+                punishment: "Снятие и бан навсегда",
+                keywords: "слив информации паролей персональных данных бан навсегда снятие"
+            },
+            {
+                id: "2.7",
+                category: "admin",
+                title: "Продажа услуг за реальные деньги",
+                desc: "Продажа услуг или разбанов за реал в обход официального доната сервера.",
+                punishment: "Перманентный бан и снятие с поста",
+                keywords: "продажа услуг разбанов реальные деньги донат снятие пермабан"
+            },
+            {
+                id: "2.8",
+                category: "admin",
+                title: "Вымогательство или шантаж игроков",
+                desc: "Требование ресурсов, голосов или услуг в обмен на снятие мута/бана.",
+                punishment: "Снятие с поста и бан 15д",
+                keywords: "вымогательство шантаж ресурсы взятка снятие бан 15д"
+            },
+            {
+                id: "2.9",
+                category: "admin",
+                title: "Провокации и участие в конфликтах",
+                desc: "Администратор сам провоцирует игроков на агрессию или оскорбления в чате, пользуясь положением.",
+                punishment: "Мут 6ч и предупреждение (при повторе — снятие)",
+                keywords: "конфликты провокация агрессия мут 6ч предупреждение снятие"
+            }
+        ];
+
+        let currentCategory = 'all';
+        let currentQuery = '';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateBadgeCounts();
+            renderRules();
+            initCursorGlow();
+
+            // Initial positioning of sliding tab pill indicator
+            const initialBtn = document.getElementById('tab-all');
+            updateTabIndicator(initialBtn);
+
+            // Synchronize pill position on window resize
+            window.addEventListener('resize', () => {
+                const activeBtn = document.getElementById(`tab-${currentCategory}`);
+                updateTabIndicator(activeBtn);
+            });
+        });
+
+        function updateTabIndicator(activeBtn) {
+            const indicator = document.getElementById('tab-indicator');
+            if (!indicator || !activeBtn) return;
+            indicator.style.left = activeBtn.offsetLeft + 'px';
+            indicator.style.width = activeBtn.offsetWidth + 'px';
+        }
+
+        // Ambient Cursor Glow Motion
+        function initCursorGlow() {
+            const glow = document.getElementById('cursor-glow');
+            window.addEventListener('mousemove', (e) => {
+                glow.style.left = e.clientX + 'px';
+                glow.style.top = e.clientY + 'px';
+            });
+            window.addEventListener('mouseleave', () => {
+                glow.style.opacity = '0';
+            });
+            window.addEventListener('mouseenter', () => {
+                glow.style.opacity = '1';
+            });
+        }
+
+        function attach3DTiltEffect(card) {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const rotateY = ((x - centerX) / centerX) * 6.5;
+                const rotateX = ((centerY - y) / centerY) * 6.5;
+                
+                card.style.transform = `perspective(1000px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) translateZ(8px)`;
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)';
+            });
+        }
+
+        function setCategory(cat, btnEl) {
+            currentCategory = cat;
+            const targetBtn = btnEl || document.getElementById(`tab-${cat}`);
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('text-slate-100');
+                btn.classList.add('text-slate-400');
+            });
+
+            if (targetBtn) {
+                targetBtn.classList.remove('text-slate-400');
+                targetBtn.classList.add('text-slate-100');
+                updateTabIndicator(targetBtn);
+            }
+
+            // Smooth opacity and slide animation when changing views
+            const grid = document.getElementById('rulesGrid');
+            grid.style.opacity = '0';
+            grid.style.transform = 'translateY(4px)';
+            grid.style.transition = 'opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)';
+
+            setTimeout(() => {
+                renderRules();
+                grid.style.opacity = '1';
+                grid.style.transform = 'translateY(0px)';
+            }, 150);
+        }
+
+        function handleSearch() {
+            const input = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('clearBtn');
+            currentQuery = input.value;
+
+            if (currentQuery.length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+
+            renderRules();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('clearBtn');
+            input.value = '';
+            currentQuery = '';
+            clearBtn.classList.add('hidden');
+            renderRules();
+        }
+
+        function renderRules() {
+            const container = document.getElementById('rulesGrid');
+            const emptyView = document.getElementById('emptyView');
+            container.innerHTML = '';
+
+            const filtered = rules.filter(r => {
+                const catMatch = (currentCategory === 'all') || (r.category === currentCategory);
+                const q = currentQuery.toLowerCase().trim();
+                const searchMatch = !q || 
+                    r.id.toLowerCase().includes(q) ||
+                    r.title.toLowerCase().includes(q) ||
+                    r.desc.toLowerCase().includes(q) ||
+                    r.punishment.toLowerCase().includes(q) ||
+                    r.keywords.toLowerCase().includes(q);
+
+                return catMatch && searchMatch;
+            });
+
+            if (filtered.length === 0) {
+                emptyView.classList.remove('hidden');
+                return;
+            } else {
+                emptyView.classList.add('hidden');
+            }
+
+            filtered.forEach(rule => {
+                const card = document.createElement('div');
+                card.className = 'tilt-card bg-brandSurface border border-brandBorder/90 rounded-xl p-4 flex flex-col justify-between cursor-default';
+
+                card.innerHTML = `
+                    <div>
+                        <!-- Card Header Badge -->
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-brandBorder/80 text-sky-400 border border-brandBorder">
+                                ${rule.id}
+                            </span>
+                            <span class="text-[10px] text-slate-500 font-mono">
+                                ${rule.category === 'player' ? 'Игроки' : 'Персонал'}
+                            </span>
+                        </div>
+
+                        <!-- Card Body -->
+                        <h3 class="text-sm font-semibold text-slate-100 mb-1 tracking-tight">
+                            ${rule.title}
+                        </h3>
+                        <p class="text-xs text-slate-400 leading-relaxed mb-3">
+                            ${rule.desc}
+                        </p>
+                    </div>
+
+                    <!-- Punishment Footer Badge -->
+                    <div class="pt-2.5 border-t border-brandBorder/60 flex items-center justify-between gap-2">
+                        <span class="text-[10px] text-slate-500 font-medium">Наказание:</span>
+                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-sky-950/40 border border-sky-800/40 text-sky-300">
+                            ${rule.punishment}
+                        </span>
+                    </div>
+                `;
+
+                // Attach 3D tilt mouse listener
+                attach3DTiltEffect(card);
+
+                container.appendChild(card);
+            });
+        }
+
+        function updateBadgeCounts() {
+            document.getElementById('count-all').innerText = rules.length;
+            document.getElementById('count-player').innerText = rules.filter(r => r.category === 'player').length;
+            document.getElementById('count-admin').innerText = rules.filter(r => r.category === 'admin').length;
+        }
+
+        function copyText(text, label) {
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            showToast(`Скопировано: ${label} (${text})`);
+        }
+
+        function showToast(text) {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toastText');
+            toastText.innerText = text;
+
+            toast.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
